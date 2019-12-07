@@ -42,7 +42,7 @@ final class MigrationPlanCalculatorTest extends TestCase
         $this->migrationPlanCalculator = new MigrationPlanCalculator($this->migrationRepository, $this->metadataStorage);
     }
 
-    public function testPlanForExactVersionWhenNoMigrations() : void
+    public function testPlanForVersionsWhenNoMigrations() : void
     {
         $m1 = new AvailableMigration(new Version('A'), $this->abstractMigration);
         $m2 = new AvailableMigration(new Version('B'), $this->abstractMigration);
@@ -57,12 +57,24 @@ final class MigrationPlanCalculatorTest extends TestCase
                 return $migrationList->getMigration($version);
             });
 
-        $plan = $this->migrationPlanCalculator->getPlanForExactVersion(new Version('C'), Direction::UP);
+        $plan = $this->migrationPlanCalculator->getPlanForVersions([new Version('C')], Direction::UP);
 
         self::assertCount(1, $plan);
         self::assertSame(Direction::UP, $plan->getDirection());
         self::assertSame(Direction::UP, $plan->getFirst()->getDirection());
         self::assertEquals(new Version('C'), $plan->getFirst()->getVersion());
+    }
+
+    public function testPlanForNoVersions() : void
+    {
+        $this->migrationRepository
+            ->expects(self::never())
+            ->method('getMigration');
+
+        $plan = $this->migrationPlanCalculator->getPlanForVersions([], Direction::UP);
+
+        self::assertCount(0, $plan);
+        self::assertSame(Direction::UP, $plan->getDirection());
     }
 
     /**

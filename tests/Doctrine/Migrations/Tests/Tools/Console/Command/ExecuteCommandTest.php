@@ -41,6 +41,9 @@ class ExecuteCommandTest extends TestCase
     /** @var MockObject */
     private $queryWriter;
 
+    /** @var MigrationRepository|MockObject */
+    private $migrationRepository;
+
     /**
      * @param mixed $arg
      *
@@ -62,7 +65,7 @@ class ExecuteCommandTest extends TestCase
             ->with($path, 'down', ['A']);
 
         $this->executeCommandTester->execute([
-            'version' => '1',
+            'versions' => ['1'],
             '--down' => true,
             '--write-sql' => $arg,
         ]);
@@ -97,7 +100,44 @@ class ExecuteCommandTest extends TestCase
             });
 
         $this->executeCommandTester->execute([
-            'version' => '1',
+            'versions' => ['1'],
+            '--down' => true,
+        ]);
+
+        self::assertSame(0, $this->executeCommandTester->getStatusCode());
+    }
+
+    public function testExecuteMultiple() : void
+    {
+        $migration = $this->createMock(AbstractMigration::class);
+        $m1        = new AvailableMigration(new Version('1'), $migration);
+
+        $expectedMigrations = ['1', '2'];
+        $i                  = 0;
+        $this->migrationRepository
+            ->expects(self::exactly(2))
+            ->method('getMigration')
+            ->willReturnCallback(static function (Version $version) use ($m1, $expectedMigrations, &$i) : AvailableMigration {
+                self::assertSame($expectedMigrations[$i++], (string) $version);
+
+                return $m1;
+            });
+
+        $this->executeCommand->expects(self::once())
+            ->method('canExecute')
+            ->willReturn(true);
+
+        $this->migrator
+            ->expects(self::once())
+            ->method('migrate')
+            ->willReturnCallback(static function (MigrationPlanList $planList, MigratorConfiguration $configuration) {
+                self::assertFalse($configuration->isDryRun());
+
+                return ['A'];
+            });
+
+        $this->executeCommandTester->execute([
+            'versions' => ['1', '2'],
             '--down' => true,
         ]);
 
@@ -120,7 +160,7 @@ class ExecuteCommandTest extends TestCase
             });
 
         $this->executeCommandTester->execute([
-            'version' => '1',
+            'versions' => ['1'],
             '--down' => true,
         ]);
 
@@ -143,13 +183,13 @@ class ExecuteCommandTest extends TestCase
         $migration = $this->createMock(AbstractMigration::class);
         $m1        = new AvailableMigration(new Version('1'), $migration);
 
-        $migrationRepository = $this->createMock(MigrationRepository::class);
-        $migrationRepository
-            ->expects(self::once())
+        $this->migrationRepository = $this->createMock(MigrationRepository::class);
+        $this->migrationRepository
+            ->expects(self::atLeast(1))
             ->method('getMigration')
             ->willReturn($m1);
 
-        $planCalculator = new MigrationPlanCalculator($migrationRepository, $storage);
+        $planCalculator = new MigrationPlanCalculator($this->migrationRepository, $storage);
 
         $configuration = new Configuration();
         $configuration->setMetadataStorageConfiguration(new TableMetadataStorageConfiguration());
@@ -173,7 +213,7 @@ class ExecuteCommandTest extends TestCase
 
         $this->dependencyFactory->expects(self::any())
             ->method('getMigrationRepository')
-            ->willReturn($migrationRepository);
+            ->willReturn($this->migrationRepository);
 
         $this->executeCommand = $this->getMockBuilder(ExecuteCommand::class)
             ->setConstructorArgs([null, $this->dependencyFactory])

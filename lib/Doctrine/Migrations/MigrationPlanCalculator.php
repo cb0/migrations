@@ -39,13 +39,18 @@ final class MigrationPlanCalculator
         $this->metadataStorage     = $metadataStorage;
     }
 
-    public function getPlanForExactVersion(Version $version, string $direction) : MigrationPlanList
+    /**
+     * @param Version[] $versions
+     */
+    public function getPlanForVersions(array $versions, string $direction) : MigrationPlanList
     {
-        $migration = $this->migrationRepository->getMigration($version);
+        $planItems = array_map(function (Version $version) use ($direction) : MigrationPlan {
+            $migration = $this->migrationRepository->getMigration($version);
 
-        $planItem = new MigrationPlan($migration->getVersion(), $migration->getMigration(), $direction);
+            return new MigrationPlan($migration->getVersion(), $migration->getMigration(), $direction);
+        }, $versions);
 
-        return new MigrationPlanList([$planItem], $direction);
+        return new MigrationPlanList($planItems, $direction);
     }
 
     public function getPlanUntilVersion(?Version $to = null) : MigrationPlanList
