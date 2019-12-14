@@ -7,16 +7,15 @@ namespace Doctrine\Migrations\Tests\Tools\Console\Command;
 use Doctrine\Migrations\AbstractMigration;
 use Doctrine\Migrations\Configuration\Configuration;
 use Doctrine\Migrations\DependencyFactory;
-use Doctrine\Migrations\Metadata\AvailableMigration;
+use Doctrine\Migrations\Metadata\MigrationPlan;
 use Doctrine\Migrations\Metadata\MigrationPlanList;
-use Doctrine\Migrations\Metadata\Storage\MetadataStorage;
 use Doctrine\Migrations\Metadata\Storage\TableMetadataStorageConfiguration;
 use Doctrine\Migrations\MigrationPlanCalculator;
-use Doctrine\Migrations\MigrationRepository;
 use Doctrine\Migrations\Migrator;
 use Doctrine\Migrations\MigratorConfiguration;
 use Doctrine\Migrations\QueryWriter;
 use Doctrine\Migrations\Tools\Console\Command\ExecuteCommand;
+use Doctrine\Migrations\Version\Direction;
 use Doctrine\Migrations\Version\Version;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -41,8 +40,8 @@ class ExecuteCommandTest extends TestCase
     /** @var MockObject */
     private $queryWriter;
 
-    /** @var MigrationRepository|MockObject */
-    private $migrationRepository;
+    /** @var MigrationPlanCalculator|MockObject */
+    private $planCalculator;
 
     /**
      * @param mixed $arg
@@ -110,18 +109,14 @@ class ExecuteCommandTest extends TestCase
     public function testExecuteMultiple() : void
     {
         $migration = $this->createMock(AbstractMigration::class);
-        $m1        = new AvailableMigration(new Version('1'), $migration);
+        $p1        = new MigrationPlan(new Version('1'), $migration, Direction::UP);
+        $pl        = new MigrationPlanList([$p1], Direction::UP);
 
-        $expectedMigrations = ['1', '2'];
-        $i                  = 0;
-        $this->migrationRepository
-            ->expects(self::exactly(2))
-            ->method('getMigration')
-            ->willReturnCallback(static function (Version $version) use ($m1, $expectedMigrations, &$i) : AvailableMigration {
-                self::assertSame($expectedMigrations[$i++], (string) $version);
-
-                return $m1;
-            });
+        $this->planCalculator
+            ->expects(self::once())
+            ->method('getPlanForVersions')
+            ->with([new Version('1'), new Version('2')])
+            ->willReturn($pl);
 
         $this->executeCommand->expects(self::once())
             ->method('canExecute')
@@ -174,22 +169,24 @@ class ExecuteCommandTest extends TestCase
             ->setMethodsExcept(['getConsoleInputMigratorConfigurationFactory'])
             ->getMock();
 
-        $storage = $this->createMock(MetadataStorage::class);
-
         $this->migrator = $this->createMock(Migrator::class);
 
         $this->queryWriter = $this->createMock(QueryWriter::class);
 
         $migration = $this->createMock(AbstractMigration::class);
-        $m1        = new AvailableMigration(new Version('1'), $migration);
 
-        $this->migrationRepository = $this->createMock(MigrationRepository::class);
-        $this->migrationRepository
-            ->expects(self::atLeast(1))
-            ->method('getMigration')
-            ->willReturn($m1);
+        $p1 = new MigrationPlan(new Version('1'), $migration, Direction::UP);
+        $pl = new MigrationPlanList([$p1], Direction::UP);
 
-        $planCalculator = new MigrationPlanCalculator($this->migrationRepository, $storage);
+        $this->planCalculator = $this->getMockBuilder(MigrationPlanCalculator::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['getPlanForVersions'])
+            ->getMock();
+
+        $this->planCalculator
+            ->expects(self::once())
+            ->method('getPlanForVersions')
+            ->willReturn($pl);
 
         $configuration = new Configuration();
         $configuration->setMetadataStorageConfiguration(new TableMetadataStorageConfiguration());
@@ -205,15 +202,11 @@ class ExecuteCommandTest extends TestCase
 
         $this->dependencyFactory->expects(self::once())
             ->method('getMigrationPlanCalculator')
-            ->willReturn($planCalculator);
+            ->willReturn($this->planCalculator);
 
         $this->dependencyFactory->expects(self::any())
             ->method('getQueryWriter')
             ->willReturn($this->queryWriter);
-
-        $this->dependencyFactory->expects(self::any())
-            ->method('getMigrationRepository')
-            ->willReturn($this->migrationRepository);
 
         $this->executeCommand = $this->getMockBuilder(ExecuteCommand::class)
             ->setConstructorArgs([null, $this->dependencyFactory])

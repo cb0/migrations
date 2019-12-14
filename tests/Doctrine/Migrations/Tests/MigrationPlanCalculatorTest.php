@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Doctrine\Migrations\Tests;
 
 use Doctrine\Migrations\AbstractMigration;
+use Doctrine\Migrations\Exception\MigrationClassNotFound;
 use Doctrine\Migrations\Exception\NoMigrationsToExecute;
 use Doctrine\Migrations\Metadata\AvailableMigration;
 use Doctrine\Migrations\Metadata\AvailableMigrationsList;
@@ -52,10 +53,8 @@ final class MigrationPlanCalculatorTest extends TestCase
 
         $this->migrationRepository
             ->expects(self::any())
-            ->method('getMigration')
-            ->willReturnCallback(static function (Version $version) use ($migrationList) {
-                return $migrationList->getMigration($version);
-            });
+            ->method('getMigrations')
+            ->willReturn($migrationList);
 
         $plan = $this->migrationPlanCalculator->getPlanForVersions([new Version('C')], Direction::UP);
 
@@ -65,11 +64,77 @@ final class MigrationPlanCalculatorTest extends TestCase
         self::assertEquals(new Version('C'), $plan->getFirst()->getVersion());
     }
 
+    public function testPlanForMultipleVersionsAreSortedUp() : void
+    {
+        $m1 = new AvailableMigration(new Version('A'), $this->abstractMigration);
+        $m2 = new AvailableMigration(new Version('B'), $this->abstractMigration);
+        $m3 = new AvailableMigration(new Version('C'), $this->abstractMigration);
+
+        $migrationList = new AvailableMigrationsList([$m1, $m2, $m3]);
+        $this->migrationRepository
+            ->expects(self::any())
+            ->method('getMigrations')
+            ->willReturn($migrationList);
+
+        $plan = $this->migrationPlanCalculator->getPlanForVersions([new Version('C'), new Version('A')], Direction::UP);
+
+        self::assertCount(2, $plan);
+        self::assertSame(Direction::UP, $plan->getDirection());
+        self::assertSame(Direction::UP, $plan->getFirst()->getDirection());
+
+        self::assertEquals(new Version('A'), $plan->getFirst()->getVersion());
+        self::assertEquals(new Version('C'), $plan->getLast()->getVersion());
+    }
+
+    public function testPlanForMultipleVersionsAreSortedDown() : void
+    {
+        $m1 = new AvailableMigration(new Version('A'), $this->abstractMigration);
+        $m2 = new AvailableMigration(new Version('B'), $this->abstractMigration);
+        $m3 = new AvailableMigration(new Version('C'), $this->abstractMigration);
+
+        $migrationList = new AvailableMigrationsList([$m1, $m2, $m3]);
+        $this->migrationRepository
+            ->expects(self::any())
+            ->method('getMigrations')
+            ->willReturn($migrationList);
+
+        $plan = $this->migrationPlanCalculator->getPlanForVersions([new Version('C'), new Version('A')], Direction::UP);
+
+        self::assertCount(2, $plan);
+        self::assertSame(Direction::UP, $plan->getDirection());
+        self::assertSame(Direction::UP, $plan->getFirst()->getDirection());
+
+        self::assertEquals(new Version('A'), $plan->getFirst()->getVersion());
+        self::assertEquals(new Version('C'), $plan->getLast()->getVersion());
+    }
+
+    public function testPlanForNoMigration() : void
+    {
+        $this->expectException(MigrationClassNotFound::class);
+        $this->expectExceptionMessage('Migration class "B" was not found?');
+
+        $this->migrationRepository
+            ->expects(self::once())
+            ->method('getMigrations')
+            ->willReturn(new AvailableMigrationsList([]));
+
+        $plan = $this->migrationPlanCalculator->getPlanForVersions([new Version('B')], Direction::UP);
+
+        self::assertCount(0, $plan);
+        self::assertSame(Direction::UP, $plan->getDirection());
+    }
+
     public function testPlanForNoVersions() : void
     {
+        $m1 = new AvailableMigration(new Version('A'), $this->abstractMigration);
+        $m2 = new AvailableMigration(new Version('B'), $this->abstractMigration);
+        $m3 = new AvailableMigration(new Version('C'), $this->abstractMigration);
+
+        $migrationList = new AvailableMigrationsList([$m1, $m2, $m3]);
         $this->migrationRepository
-            ->expects(self::never())
-            ->method('getMigration');
+            ->expects(self::any())
+            ->method('getMigrations')
+            ->willReturn($migrationList);
 
         $plan = $this->migrationPlanCalculator->getPlanForVersions([], Direction::UP);
 
