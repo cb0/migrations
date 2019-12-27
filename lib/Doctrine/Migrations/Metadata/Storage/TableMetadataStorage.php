@@ -17,12 +17,12 @@ use Doctrine\Migrations\Version\Direction;
 use Doctrine\Migrations\Version\ExecutionResult;
 use Doctrine\Migrations\Version\Version;
 use InvalidArgumentException;
-use const CASE_LOWER;
 use function array_change_key_case;
 use function floatval;
 use function round;
 use function sprintf;
 use function strtolower;
+use const CASE_LOWER;
 
 final class TableMetadataStorage implements MetadataStorage
 {
@@ -47,6 +47,7 @@ final class TableMetadataStorage implements MetadataStorage
         if ($configuration !== null && ! ($configuration instanceof TableMetadataStorageConfiguration)) {
             throw new InvalidArgumentException(sprintf('%s accepts only %s as configuration', self::class, TableMetadataStorageConfiguration::class));
         }
+
         $this->configuration = $configuration ?: new TableMetadataStorageConfiguration();
     }
 

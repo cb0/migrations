@@ -10,10 +10,10 @@ use Doctrine\Migrations\Configuration\Exception\UnknownLoader;
 use Doctrine\Migrations\Tools\Console\Exception\FileTypeNotSupported;
 use Symfony\Component\Console\Helper\Helper;
 use Symfony\Component\Console\Input\InputInterface;
-use const PATHINFO_EXTENSION;
 use function file_exists;
 use function is_string;
 use function pathinfo;
+use const PATHINFO_EXTENSION;
 
 /**
  * The MigrationsConfigurationHelper class is responsible for getting the Configuration instance from one of the supported methods
@@ -80,9 +80,6 @@ final class MigrationsConfigurationHelper extends Helper implements Configuratio
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getName() : string
     {
         return 'configuration';

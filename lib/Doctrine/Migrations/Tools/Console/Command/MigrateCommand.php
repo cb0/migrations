@@ -165,6 +165,7 @@ EOT
 
                 return 1;
             }
+
             $writer = $this->getDependencyFactory()->getQueryWriter();
             $writer->write($path, $plan->getDirection(), $sql);
 
@@ -226,11 +227,13 @@ EOT
 
             return;
         }
+
         if ($versionAlias === 'next' || $versionAlias === 'latest') {
             $output->writeln('<error>Already at latest version.</error>');
 
             return;
         }
+
         if (substr($versionAlias, 0, 7) === 'current') {
             $output->writeln('<error>The delta couldn\'t be reached.</error>');
 

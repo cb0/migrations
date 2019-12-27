@@ -17,6 +17,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
+use function assert;
 use function escapeshellarg;
 use function is_string;
 use function proc_open;
@@ -77,8 +78,8 @@ abstract class DoctrineCommand extends Command
         $helperSet = $this->getHelperSet() ?: new HelperSet();
 
         if ($helperSet->has('configuration') && $helperSet->get('configuration') instanceof ConfigurationHelper) {
-            /** @var MigrationsConfigurationHelper $configHelper */
             $configHelper = $helperSet->get('configuration');
+            assert($configHelper instanceof MigrationsConfigurationHelper);
         } else {
             $configHelper = new MigrationsConfigurationHelper();
         }

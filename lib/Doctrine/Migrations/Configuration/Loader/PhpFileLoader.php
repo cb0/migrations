@@ -31,6 +31,7 @@ final class PhpFileLoader extends AbstractFileLoader
         if (! file_exists($file)) {
             throw FileNotFound::new();
         }
+
         $config = require $file;
         if ($config instanceof Configuration) {
             return $config;

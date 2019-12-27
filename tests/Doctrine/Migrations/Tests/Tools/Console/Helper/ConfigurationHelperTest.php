@@ -154,6 +154,7 @@ class ConfigurationHelperTest extends MigrationTestCase
         } finally {
             chdir($dir);
         }
+
         self::assertSame($config, $confExpected);
     }
 }

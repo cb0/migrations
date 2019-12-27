@@ -8,14 +8,14 @@ use Doctrine\Migrations\Tools\Console\ConsoleRunner;
 use Phar;
 use Symfony\Component\Console\Helper\HelperSet;
 use Symfony\Component\Console\Helper\QuestionHelper;
-use const DIRECTORY_SEPARATOR;
-use const E_USER_ERROR;
-use const PHP_EOL;
 use function extension_loaded;
 use function file_exists;
 use function getcwd;
 use function is_readable;
 use function trigger_error;
+use const DIRECTORY_SEPARATOR;
+use const E_USER_ERROR;
+use const PHP_EOL;
 
 (static function () : void {
     $autoloadFiles = [

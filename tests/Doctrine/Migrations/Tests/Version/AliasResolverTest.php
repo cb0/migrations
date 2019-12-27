@@ -45,6 +45,7 @@ final class AliasResolverTest extends TestCase
         if ($expectedException !== null) {
             $this->expectException($expectedException);
         }
+
         $migrationClass = $this->createMock(AbstractMigration::class);
         foreach (['A', 'B', 'C'] as $version) {
             $this->migrationRepository->registerMigrationInstance(new Version($version), $migrationClass);
@@ -76,6 +77,7 @@ final class AliasResolverTest extends TestCase
         foreach (['A', 'B', 'C'] as $version) {
             $this->migrationRepository->registerMigrationInstance(new Version($version), $migrationClass);
         }
+
         $resolvedAlias = $this->versionAliasResolver->resolveVersionAlias($alias);
         if ($expectedVersion === null) {
             return;
